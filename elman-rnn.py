@@ -3,9 +3,10 @@ Implementation of the character-level Elman RNN model.
 Written by Ngoc-Quan Pham based on Andreij Karparthy's lecture Cs231n.
 BSD License
 """
-import numpy as np
-from random import uniform
 import sys
+from random import uniform
+
+import numpy as np
 
 
 # Since numpy doesn't have a function for sigmoid
@@ -33,17 +34,21 @@ def softmax(x):
 
 # data I/O
 # should be simple plain text file. The sample from "Hamlet - Shakespeares" is provided in data/
-data = open('data/input.txt', 'r').read()
-chars = sorted(list(set(data)))  # added sorted so that the character list is deterministic
+data = open("data/input.txt", "r").read()
+chars = sorted(
+    list(set(data))
+)  # added sorted so that the character list is deterministic
 print(chars)
 data_size, vocab_size = len(data), len(chars)
-print('data has %d characters, %d unique.' % (data_size, vocab_size))
+print("data has %d characters, %d unique." % (data_size, vocab_size))
 char_to_ix = {ch: i for i, ch in enumerate(chars)}
 ix_to_char = {i: ch for i, ch in enumerate(chars)}
 
 # hyper-parameters deciding the network size
 emb_size = 4  # word/character embedding size
-seq_length = 32  # number of steps to unroll the RNN for the truncated back-propagation algorithm
+seq_length = (
+    32  # number of steps to unroll the RNN for the truncated back-propagation algorithm
+)
 hidden_size = 32
 # learning rate for the Adagrad algorithm. (this one is not 'optimized', only required to make the model learn)
 learning_rate = 0.02
@@ -72,7 +77,12 @@ by = np.random.randn(vocab_size, 1) * std  # hidden bias
 
 # These variables are momentums for the Adagrad algorithm
 # Each parameter in the network needs one momentum correspondingly
-mWex, mWxh, mWhh, mWhy = np.zeros_like(Wex), np.zeros_like(Wxh), np.zeros_like(Whh), np.zeros_like(Why)
+mWex, mWxh, mWhh, mWhy = (
+    np.zeros_like(Wex),
+    np.zeros_like(Wxh),
+    np.zeros_like(Whh),
+    np.zeros_like(Why),
+)
 mbh, mby = np.zeros_like(bh), np.zeros_like(by)
 
 # this will load the data into memory
@@ -157,7 +167,12 @@ def backward(activations, clipping=True, scale=True):
 
     # Gradient initialization
     # Each parameter has a corresponding gradient (of the loss with respect to that gradient)
-    dWex, dWxh, dWhh, dWhy = np.zeros_like(Wex), np.zeros_like(Wxh), np.zeros_like(Whh), np.zeros_like(Why)
+    dWex, dWxh, dWhh, dWhy = (
+        np.zeros_like(Wex),
+        np.zeros_like(Wxh),
+        np.zeros_like(Whh),
+        np.zeros_like(Why),
+    )
     dbh, dby = np.zeros_like(bh), np.zeros_like(by)
 
     xs, cs, hs, os, ps, ys = activations
@@ -248,7 +263,7 @@ def sample(h, seed_ix, n):
 
 option = sys.argv[1]  # train or gradcheck
 
-if option == 'train':
+if option == "train":
 
     n, p = 0, 0
     data_length = cut_stream.shape[1]
@@ -263,39 +278,43 @@ if option == 'train':
             hprev = np.zeros((hidden_size, batch_size))  # reset RNN memory
             p = 0  # go back to start of data
 
-        inputs = cut_stream[:, p:p + seq_length]
-        targets = cut_stream[:, p + 1:p + 1 + seq_length]
+        inputs = cut_stream[:, p : p + seq_length]
+        targets = cut_stream[:, p + 1 : p + 1 + seq_length]
 
         # sample from the model now and then
         if n % 1000 == 0:
             h_zero = np.zeros((hidden_size, 1))
             sample_ix = sample(h_zero, inputs[0][0], 1500)
-            txt = ''.join(ix_to_char[ix] for ix in sample_ix)
-            print('----\n %s \n----' % (txt,))
+            txt = "".join(ix_to_char[ix] for ix in sample_ix)
+            print("----\n %s \n----" % (txt,))
 
         # forward seq_length characters through the net and fetch gradient
-        loss, activations, memory = forward(inputs, targets, hprev, batch_size=batch_size)
+        loss, activations, memory = forward(
+            inputs, targets, hprev, batch_size=batch_size
+        )
         gradients = backward(activations)
         dWex, dWxh, dWhh, dWhy, dbh, dby = gradients
         smooth_loss = smooth_loss * 0.999 + loss / batch_size * 0.001
         if n % 20 == 0:
-            print('iter %d, loss: %f' % (n, smooth_loss))  # print progress
+            print("iter %d, loss: %f" % (n, smooth_loss))  # print progress
 
         # perform parameter update with Adagrad
-        for param, dparam, mem in zip([Wex, Wxh, Whh, Why, bh, by],
-                                      [dWex, dWxh, dWhh, dWhy, dbh, dby],
-                                      [mWex, mWxh, mWhh, mWhy, mbh, mby]):
+        for param, dparam, mem in zip(
+            [Wex, Wxh, Whh, Why, bh, by],
+            [dWex, dWxh, dWhh, dWhy, dbh, dby],
+            [mWex, mWxh, mWhh, mWhy, mbh, mby],
+        ):
             mem += dparam * dparam
             param += -learning_rate * dparam / np.sqrt(mem + 1e-8)  # adagrad update
 
         p += seq_length  # move data pointer
         n += 1  # iteration counter
 
-elif option == 'gradcheck':
+elif option == "gradcheck":
 
     p = 0
-    inputs = cut_stream[:, p:p + seq_length]
-    targets = cut_stream[:, p + 1:p + 1 + seq_length]
+    inputs = cut_stream[:, p : p + seq_length]
+    targets = cut_stream[:, p + 1 : p + 1 + seq_length]
 
     delta = 0.0001
 
@@ -307,12 +326,17 @@ elif option == 'gradcheck':
     gradients = backward(activations, clipping=False, scale=False)
     dWex, dWxh, dWhh, dWhy, dbh, dby = gradients
 
-    for weight, grad, name in zip([Wex, Wxh, Whh, Why, bh, by],
-                                  [dWex, dWxh, dWhh, dWhy, dbh, dby],
-                                  ['dWex', 'dWxh', 'dWhh', 'dWhhy', 'dbh', 'dby']):
+    for weight, grad, name in zip(
+        [Wex, Wxh, Whh, Why, bh, by],
+        [dWex, dWxh, dWhh, dWhy, dbh, dby],
+        ["dWex", "dWxh", "dWhh", "dWhhy", "dbh", "dby"],
+    ):
 
-        str_ = ("Dimensions dont match between weight and gradient %s and %s." % (weight.shape, grad.shape))
-        assert (weight.shape == grad.shape), str_
+        str_ = "Dimensions dont match between weight and gradient %s and %s." % (
+            weight.shape,
+            grad.shape,
+        )
+        assert weight.shape == grad.shape, str_
 
         count_idx = 0
         grad_num_sum = 0
@@ -335,18 +359,32 @@ elif option == 'gradcheck':
             grad_numerical = (loss_positive - loss_negative) / (2 * delta)
             grad_num_sum += grad_numerical
             grad_ana_sum += grad_analytic
-            rel_error = abs(grad_analytic - grad_numerical) / abs(grad_numerical + grad_analytic)
+            rel_error = abs(grad_analytic - grad_numerical) / abs(
+                grad_numerical + grad_analytic
+            )
             if rel_error is None:
-                rel_error = 0.
+                rel_error = 0.0
             rel_error_sum += rel_error
 
             if rel_error > 0.0001:
-                print('WARNING %f, %f => %e ' % (grad_numerical, grad_analytic, rel_error))
+                print(
+                    "WARNING %f, %f => %e " % (grad_numerical, grad_analytic, rel_error)
+                )
                 count_idx += 1
                 error_idx.append(i)
 
-        print('For %s found %i bad gradients; with %i total parameters in the vector/matrix!' % (
-            name, count_idx, weight.size))
-        print(' Average numerical grad: %0.9f \n Average analytical grad: %0.9f \n Average relative grad: %0.9f' % (
-            grad_num_sum / float(weight.size), grad_ana_sum / float(weight.size), rel_error_sum / float(weight.size)))
-        print(' Indizes at which analytical gradient does not match numerical:', error_idx)
+        print(
+            "For %s found %i bad gradients; with %i total parameters in the vector/matrix!"
+            % (name, count_idx, weight.size)
+        )
+        print(
+            " Average numerical grad: %0.9f \n Average analytical grad: %0.9f \n Average relative grad: %0.9f"
+            % (
+                grad_num_sum / float(weight.size),
+                grad_ana_sum / float(weight.size),
+                rel_error_sum / float(weight.size),
+            )
+        )
+        print(
+            " Indizes at which analytical gradient does not match numerical:", error_idx
+        )

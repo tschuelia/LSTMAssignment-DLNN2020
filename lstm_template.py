@@ -41,11 +41,12 @@ option = sys.argv[1]
 
 # hyperparameters
 emb_size = 64
-hidden_size = 128  # 256  # size of hidden layer of neurons
-seq_length = 128  # 128  # number of steps to unroll the RNN for
-learning_rate = 0.1  # 5e-2
+hidden_size = 128  # size of hidden layer of neurons
+seq_length = 128  # number of steps to unroll the RNN for
+learning_rate = 0.1
 max_updates = 500000
-batch_size = 8  # 1
+batch_size = 8
+epochs = 5000
 
 concat_size = emb_size + hidden_size
 
@@ -210,6 +211,8 @@ def backward(activations, clipping=True):
         dbo += np.sum(do, axis=-1, keepdims=True)
 
         # gradient of the memory
+        # for some reason applying the tanh to the c value is required
+        # even though we think this is not actually correct?
         dc = os[t] * dh * dtanh(np.tanh(cs[t])) + dc_next
 
         # gradient of the update gate
@@ -334,6 +337,11 @@ if option == "train":
         if n % 20 == 0:
             print("iter %d, loss: %f" % (n, smooth_loss))  # print progress
 
+        if n % 100 == 0:
+            # save prediction to file
+            with open(f"predictions/prediction_iter{n}.txt", "w+") as f:
+                f.write(f"Prediction iter: {n} \n Loss: {smooth_loss} \n \n {txt}")
+
         # perform parameter update with Adagrad
         for param, dparam, mem in zip(
             [Wf, Wi, Wo, Wc, bf, bi, bo, bc, Wex, Why, by],
@@ -346,8 +354,9 @@ if option == "train":
         p += seq_length  # move data pointer
         n += 1  # iteration counter
         n_updates += 1
-        if n_updates >= max_updates:
+        if n_updates >= max_updates or n_updates >= epochs:
             break
+
 
 elif option == "gradcheck":
 
